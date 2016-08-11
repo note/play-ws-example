@@ -1,44 +1,18 @@
 package controllers
 
-import akka.NotUsed
 import akka.actor._
-import akka.pattern.ask
 import akka.stream._
-import akka.stream.scaladsl.{Sink, Flow, Source}
-import akka.util.Timeout
-import play.api.libs.streams.ActorFlow
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import play.api.mvc.{Controller, WebSocket}
-import services.Service
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 
 class WebSocketController (implicit serviceA: ActorRef, actorSystem: ActorSystem, materializer: Materializer) extends Controller {
-  val flow = Flow.fromSinkAndSource(Sink.ignore,Source.fromIterator(() => (1 to 50).toIterator).map(i => "hello" + i))
+  val items = List(
+    "abc",
+    "def",
+    scala.util.Random.alphanumeric.take(300).mkString
+  )
+
   def index = WebSocket.accept[String, String] { request =>
-    flow
-  }
-}
-
-object MyWebSocketActor {
-  def props(serviceA: ActorRef, out: ActorRef, killSwitch: SharedKillSwitch) = Props(new MyWebSocketActor(serviceA, out, killSwitch))
-  case object Stop
-}
-
-class MyWebSocketActor(serviceA: ActorRef, out: ActorRef, killSwitch: SharedKillSwitch) extends Actor {
-  implicit val timeout: Timeout = 20.seconds
-
-  def receive = {
-    case msg: String =>
-      out ! msg
-      context.system.scheduler.scheduleOnce(300.millis, self, MyWebSocketActor.Stop)
-    case MyWebSocketActor.Stop =>
-      killSwitch.shutdown()
-      println("bazinga 2")
-      self ! PoisonPill
-  }
-
-  override def postStop() = {
-    println("websocket's actor has been stopped")
+    Flow.fromSinkAndSource(Sink.ignore, Source(items))
   }
 }
