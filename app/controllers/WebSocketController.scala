@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.actor._
 import akka.pattern.ask
 import akka.stream._
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Sink, Flow, Source}
 import akka.util.Timeout
 import play.api.libs.streams.ActorFlow
 import play.api.mvc.{Controller, WebSocket}
@@ -14,10 +14,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 class WebSocketController (implicit serviceA: ActorRef, actorSystem: ActorSystem, materializer: Materializer) extends Controller {
+  val flow = Flow.fromSinkAndSource(Sink.ignore,Source.fromIterator(() => (1 to 50).toIterator).map(i => "hello" + i))
   def index = WebSocket.accept[String, String] { request =>
-    val killSwitch = KillSwitches.shared(scala.util.Random.nextInt.toString)
-    val flow = Flow[String].map(s => s).via(killSwitch.flow)
-    flow.via(ActorFlow.actorRef(out => MyWebSocketActor.props(serviceA, out, killSwitch)))
+    flow
   }
 }
 
