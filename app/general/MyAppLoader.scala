@@ -1,6 +1,5 @@
 package general
 
-import akka.stream.ActorMaterializer
 import controllers.WebSocketController
 import router.Routes
 import play.api.ApplicationLoader.Context
@@ -14,8 +13,10 @@ class MyAppLoader extends ApplicationLoader {
 
 class MyAppComponents(val context: Context) extends BuiltInComponentsFromContext(context) {
   implicit lazy val system = actorSystem
-  val serviceA = actorSystem.actorOf(Service.props(1200))
-  val wsController = new WebSocketController()(serviceA, system, materializer)
+  val serviceA = actorSystem.actorOf(Service.props(1500, "slow"))
+  val serviceB = actorSystem.actorOf(Service.props(100, "fastest"))
+  val serviceC = actorSystem.actorOf(Service.props(500, "fast"))
+  val wsController = new WebSocketController(serviceA, serviceB, serviceC)(system, materializer)
 
   override def router: Router = new Routes(httpErrorHandler, wsController)
 }
